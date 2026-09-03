@@ -23,7 +23,7 @@ export default async function DashboardPage() {
           value={summary.revenue}
           format="currency"
           changePercent={summary.revenueChangePercent}
-          icon={DollarSign}
+          icon={<DollarSign className="h-4 w-4 text-secondary" />}
           index={0}
         />
         <StatCard
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
           value={summary.cost}
           format="currency"
           changePercent={summary.costChangePercent}
-          icon={TrendingDown}
+          icon={<TrendingDown className="h-4 w-4 text-secondary" />}
           index={1}
         />
         <StatCard
@@ -39,7 +39,7 @@ export default async function DashboardPage() {
           value={summary.profit}
           format="currency"
           changePercent={summary.profitChangePercent}
-          icon={TrendingUp}
+          icon={<TrendingUp className="h-4 w-4 text-secondary" />}
           index={2}
         />
         <StatCard
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
           value={summary.marginPercent}
           format="percent"
           changePercent={summary.marginChangePercent}
-          icon={Percent}
+          icon={<Percent className="h-4 w-4 text-secondary" />}
           index={3}
         />
       </div>
