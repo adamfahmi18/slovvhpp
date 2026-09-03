@@ -4,19 +4,20 @@ import { motion } from "framer-motion";
 import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency, formatPercent } from "@/lib/utils";
 
 interface StatCardProps {
   label: string;
   value: number;
-  formatter: (value: number) => string;
+  format: "currency" | "percent";
   changePercent: number;
   icon: LucideIcon;
   index?: number;
 }
 
-export function StatCard({ label, value, formatter, changePercent, icon: Icon, index = 0 }: StatCardProps) {
+export function StatCard({ label, value, format, changePercent, icon: Icon, index = 0 }: StatCardProps) {
   const isPositive = changePercent >= 0;
+  const formatter = format === "percent" ? (v: number) => formatPercent(v) : formatCurrency;
 
   return (
     <motion.div
