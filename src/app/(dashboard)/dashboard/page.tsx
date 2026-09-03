@@ -6,6 +6,7 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { getDashboardSummary } from "@/actions/dashboard";
 
+
 export const metadata: Metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function DashboardPage() {
           value={summary.revenue}
           format="currency"
           changePercent={summary.revenueChangePercent}
-          icon={<DollarSign className="h-4 w-4 text-secondary" />}
+          icon={DollarSign}
           index={0}
         />
         <StatCard
@@ -30,7 +31,7 @@ export default async function DashboardPage() {
           value={summary.cost}
           format="currency"
           changePercent={summary.costChangePercent}
-          icon={<TrendingDown className="h-4 w-4 text-secondary" />}
+          icon={TrendingDown}
           index={1}
         />
         <StatCard
@@ -38,7 +39,7 @@ export default async function DashboardPage() {
           value={summary.profit}
           format="currency"
           changePercent={summary.profitChangePercent}
-          icon={<TrendingUp className="h-4 w-4 text-secondary" />}
+          icon={TrendingUp}
           index={2}
         />
         <StatCard
@@ -46,7 +47,7 @@ export default async function DashboardPage() {
           value={summary.marginPercent}
           format="percent"
           changePercent={summary.marginChangePercent}
-          icon={<Percent className="h-4 w-4 text-secondary" />}
+          icon={Percent}
           index={3}
         />
       </div>

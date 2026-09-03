@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth";
 import { calculateHpp } from "@/lib/calculations/hpp";
 import { productSchema } from "@/lib/validations/product";
+import { syncProductRecipe } from "@/actions/raw-materials";
 import type { ActionResult, PaginatedResult, Product } from "@/types";
 
 export interface GetProductsParams {
@@ -68,8 +69,36 @@ export async function createProduct(_prevState: ActionResult | null, formData: F
   }
 
   const session = await getSession();
+  const supabase = createServiceClient();
+
+  // Insert first (placeholder cost fields) so the recipe rows have a
+  // product_id to reference, then recompute and patch the real costs.
+  const { data: inserted, error: insertError } = await supabase
+    .from("products")
+    .insert({
+      user_id: session?.userId ?? null,
+      name: parsed.data.name,
+      category: parsed.data.category || "Umum",
+      sku: parsed.data.sku || null,
+      packaging_cost: parsed.data.packagingCost,
+      labor_cost: parsed.data.laborCost,
+      utility_cost: parsed.data.utilityCost,
+      operational_cost: parsed.data.operationalCost,
+      additional_cost: parsed.data.additionalCost,
+      quantity_produced: parsed.data.quantityProduced,
+      margin_percent: parsed.data.marginPercent,
+      status: parsed.data.status,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !inserted) {
+    return { success: false, message: "Gagal menyimpan produk. Coba lagi." };
+  }
+
+  const { rawMaterialCost } = await syncProductRecipe(inserted.id, parseRecipeItems(formData));
   const hpp = calculateHpp({
-    rawMaterialCost: parsed.data.rawMaterialCost,
+    rawMaterialCost,
     packagingCost: parsed.data.packagingCost,
     laborCost: parsed.data.laborCost,
     utilityCost: parsed.data.utilityCost,
@@ -79,26 +108,16 @@ export async function createProduct(_prevState: ActionResult | null, formData: F
     marginPercent: parsed.data.marginPercent,
   });
 
-  const supabase = createServiceClient();
-  const { error } = await supabase.from("products").insert({
-    user_id: session?.userId ?? null,
-    name: parsed.data.name,
-    category: parsed.data.category || "Umum",
-    sku: parsed.data.sku || null,
-    raw_material_cost: parsed.data.rawMaterialCost,
-    packaging_cost: parsed.data.packagingCost,
-    labor_cost: parsed.data.laborCost,
-    utility_cost: parsed.data.utilityCost,
-    operational_cost: parsed.data.operationalCost,
-    additional_cost: parsed.data.additionalCost,
-    quantity_produced: parsed.data.quantityProduced,
-    margin_percent: parsed.data.marginPercent,
-    total_cost: hpp.totalCost,
-    cost_per_item: hpp.costPerItem,
-    selling_price: hpp.sellingPrice,
-    profit_per_item: hpp.profitPerItem,
-    status: parsed.data.status,
-  });
+  const { error } = await supabase
+    .from("products")
+    .update({
+      raw_material_cost: rawMaterialCost,
+      total_cost: hpp.totalCost,
+      cost_per_item: hpp.costPerItem,
+      selling_price: hpp.sellingPrice,
+      profit_per_item: hpp.profitPerItem,
+    })
+    .eq("id", inserted.id);
 
   if (error) {
     return { success: false, message: "Gagal menyimpan produk. Coba lagi." };
@@ -107,6 +126,16 @@ export async function createProduct(_prevState: ActionResult | null, formData: F
   revalidatePath("/products");
   revalidatePath("/dashboard");
   return { success: true, message: "Produk berhasil ditambahkan." };
+}
+
+function parseRecipeItems(formData: FormData): unknown {
+  const raw = formData.get("recipeItems");
+  if (!raw) return [];
+  try {
+    return JSON.parse(String(raw));
+  } catch {
+    return [];
+  }
 }
 
 export async function updateProduct(
@@ -121,8 +150,9 @@ export async function updateProduct(
     return { success: false, message: "Periksa kembali data produk.", errors: parsed.error.flatten().fieldErrors };
   }
 
+  const { rawMaterialCost } = await syncProductRecipe(id, parseRecipeItems(formData));
   const hpp = calculateHpp({
-    rawMaterialCost: parsed.data.rawMaterialCost,
+    rawMaterialCost,
     packagingCost: parsed.data.packagingCost,
     laborCost: parsed.data.laborCost,
     utilityCost: parsed.data.utilityCost,
@@ -139,7 +169,7 @@ export async function updateProduct(
       name: parsed.data.name,
       category: parsed.data.category || "Umum",
       sku: parsed.data.sku || null,
-      raw_material_cost: parsed.data.rawMaterialCost,
+      raw_material_cost: rawMaterialCost,
       packaging_cost: parsed.data.packagingCost,
       labor_cost: parsed.data.laborCost,
       utility_cost: parsed.data.utilityCost,

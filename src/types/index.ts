@@ -42,6 +42,28 @@ export interface Calculation {
   created_at: string;
 }
 
+export interface RawMaterial {
+  id: string;
+  user_id: string | null;
+  name: string;
+  unit: string;
+  price_per_unit: number;
+  stock_quantity: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecipeItem {
+  id: string;
+  product_id: string;
+  raw_material_id: string;
+  quantity: number;
+}
+
+export interface RecipeItemWithMaterial extends RecipeItem {
+  raw_material: Pick<RawMaterial, "id" | "name" | "unit" | "price_per_unit">;
+}
+
 export type PeriodType = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface Report {

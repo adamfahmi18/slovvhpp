@@ -23,14 +23,15 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ProductFormDialog } from "./product-form-dialog";
 import { DeleteProductDialog } from "./delete-product-dialog";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import type { Product } from "@/types";
+import type { Product, RawMaterial } from "@/types";
 
 interface ProductsTableProps {
   products: Product[];
   defaultMarginPercent: number;
+  rawMaterials: RawMaterial[];
 }
 
-export function ProductsTable({ products, defaultMarginPercent }: ProductsTableProps) {
+export function ProductsTable({ products, defaultMarginPercent, rawMaterials }: ProductsTableProps) {
   const [editing, setEditing] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<Product | null>(null);
 
@@ -109,6 +110,7 @@ export function ProductsTable({ products, defaultMarginPercent }: ProductsTableP
           open={!!editing}
           onOpenChange={(open) => !open && setEditing(null)}
           defaultMarginPercent={defaultMarginPercent}
+          rawMaterials={rawMaterials}
         />
       )}
 

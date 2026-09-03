@@ -14,13 +14,15 @@ import {
 } from "@/components/ui/select";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { ProductFormDialog } from "./product-form-dialog";
+import type { RawMaterial } from "@/types";
 
 interface ProductsToolbarProps {
   categories: string[];
   defaultMarginPercent: number;
+  rawMaterials: RawMaterial[];
 }
 
-export function ProductsToolbar({ categories, defaultMarginPercent }: ProductsToolbarProps) {
+export function ProductsToolbar({ categories, defaultMarginPercent, rawMaterials }: ProductsToolbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -96,6 +98,7 @@ export function ProductsToolbar({ categories, defaultMarginPercent }: ProductsTo
         open={createOpen}
         onOpenChange={setCreateOpen}
         defaultMarginPercent={defaultMarginPercent}
+        rawMaterials={rawMaterials}
       />
     </div>
   );

@@ -5,6 +5,7 @@ import { ProductsToolbar } from "@/components/products/products-toolbar";
 import { ProductsTable } from "@/components/products/products-table";
 import { Pagination } from "@/components/shared/pagination";
 import { getProducts, getProductCategories } from "@/actions/products";
+import { getAllRawMaterials } from "@/actions/raw-materials";
 import { getSystemSettings } from "@/actions/settings";
 
 export const metadata: Metadata = { title: "Produk" };
@@ -18,7 +19,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
 
-  const [{ items, total, totalPages, pageSize }, categories, settings] = await Promise.all([
+  const [{ items, total, totalPages, pageSize }, categories, settings, rawMaterials] = await Promise.all([
     getProducts({
       search: params.search,
       category: params.category ?? "all",
@@ -28,16 +29,25 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     }),
     getProductCategories(),
     getSystemSettings(),
+    getAllRawMaterials(),
   ]);
 
   return (
     <div>
       <PageHeader title="Produk" description="Kelola katalog produk beserta rincian HPP masing-masing." />
 
-      <ProductsToolbar categories={categories} defaultMarginPercent={Number(settings.default_margin_percent) || 30} />
+      <ProductsToolbar
+        categories={categories}
+        defaultMarginPercent={Number(settings.default_margin_percent) || 30}
+        rawMaterials={rawMaterials}
+      />
 
       <Card className="overflow-hidden">
-        <ProductsTable products={items} defaultMarginPercent={Number(settings.default_margin_percent) || 30} />
+        <ProductsTable
+          products={items}
+          defaultMarginPercent={Number(settings.default_margin_percent) || 30}
+          rawMaterials={rawMaterials}
+        />
         {total > 0 && <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} />}
       </Card>
     </div>

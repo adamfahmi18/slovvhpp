@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -28,7 +28,8 @@ import { productSchema, type ProductInput } from "@/lib/validations/product";
 import { calculateHpp } from "@/lib/calculations/hpp";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { createProduct, updateProduct } from "@/actions/products";
-import type { Product } from "@/types";
+import { getProductRecipe } from "@/actions/raw-materials";
+import type { Product, RawMaterial } from "@/types";
 
 interface ProductFormDialogProps {
   mode: "create" | "edit";
@@ -36,16 +37,28 @@ interface ProductFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultMarginPercent: number;
+  rawMaterials: RawMaterial[];
 }
 
 const COST_FIELDS: { name: keyof ProductInput; label: string }[] = [
-  { name: "rawMaterialCost", label: "Bahan Baku" },
   { name: "packagingCost", label: "Kemasan" },
   { name: "laborCost", label: "Tenaga Kerja" },
   { name: "utilityCost", label: "Utilitas" },
   { name: "operationalCost", label: "Operasional" },
   { name: "additionalCost", label: "Tambahan" },
 ];
+
+interface RecipeRow {
+  key: string;
+  rawMaterialId: string;
+  quantity: number;
+}
+
+let rowKeySeq = 0;
+function nextRowKey() {
+  rowKeySeq += 1;
+  return `row-${rowKeySeq}`;
+}
 
 function buildDefaultValues(product: Product | undefined, defaultMarginPercent: number): ProductInput {
   if (!product) {
@@ -80,9 +93,18 @@ function buildDefaultValues(product: Product | undefined, defaultMarginPercent: 
   };
 }
 
-export function ProductFormDialog({ mode, product, open, onOpenChange, defaultMarginPercent }: ProductFormDialogProps) {
+export function ProductFormDialog({
+  mode,
+  product,
+  open,
+  onOpenChange,
+  defaultMarginPercent,
+  rawMaterials,
+}: ProductFormDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [recipeRows, setRecipeRows] = useState<RecipeRow[]>([]);
+  const [loadingRecipe, setLoadingRecipe] = useState(false);
 
   const {
     register,
@@ -97,14 +119,55 @@ export function ProductFormDialog({ mode, product, open, onOpenChange, defaultMa
   });
 
   useEffect(() => {
-    if (open) reset(buildDefaultValues(product, defaultMarginPercent));
-  }, [open, product, defaultMarginPercent, reset]);
+    if (!open) return;
+    reset(buildDefaultValues(product, defaultMarginPercent));
+
+    if (mode === "edit" && product) {
+      setLoadingRecipe(true);
+      getProductRecipe(product.id)
+        .then((items) => {
+          setRecipeRows(
+            items.map((item) => ({ key: nextRowKey(), rawMaterialId: item.raw_material_id, quantity: item.quantity }))
+          );
+        })
+        .finally(() => setLoadingRecipe(false));
+    } else {
+      setRecipeRows([]);
+    }
+  }, [open, product, mode, defaultMarginPercent, reset]);
+
+  const materialById = useMemo(() => new Map(rawMaterials.map((m) => [m.id, m])), [rawMaterials]);
+
+  const recipeCost = useMemo(
+    () =>
+      recipeRows.reduce((sum, row) => {
+        const material = materialById.get(row.rawMaterialId);
+        return sum + (material ? row.quantity * material.price_per_unit : 0);
+      }, 0),
+    [recipeRows, materialById]
+  );
+
+  useEffect(() => {
+    setValue("rawMaterialCost", recipeCost);
+  }, [recipeCost, setValue]);
+
+  function addRecipeRow() {
+    setRecipeRows((rows) => [...rows, { key: nextRowKey(), rawMaterialId: rawMaterials[0]?.id ?? "", quantity: 1 }]);
+  }
+
+  function updateRecipeRow(key: string, patch: Partial<RecipeRow>) {
+    setRecipeRows((rows) => rows.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+  }
+
+  function removeRecipeRow(key: string) {
+    setRecipeRows((rows) => rows.filter((row) => row.key !== key));
+  }
 
   const values = watch();
   const preview = useMemo(
     () =>
       calculateHpp({
-        rawMaterialCost: Number(values.rawMaterialCost) || 0,
+        rawMaterialCost: recipeCost,
         packagingCost: Number(values.packagingCost) || 0,
         laborCost: Number(values.laborCost) || 0,
         utilityCost: Number(values.utilityCost) || 0,
@@ -113,12 +176,20 @@ export function ProductFormDialog({ mode, product, open, onOpenChange, defaultMa
         quantityProduced: Number(values.quantityProduced) || 1,
         marginPercent: Number(values.marginPercent) || 0,
       }),
-    [values]
+    [values, recipeCost]
   );
 
   function onSubmit(data: ProductInput) {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => formData.set(key, String(value ?? "")));
+    formData.set(
+      "recipeItems",
+      JSON.stringify(
+        recipeRows
+          .filter((row) => row.rawMaterialId && row.quantity > 0)
+          .map((row) => ({ rawMaterialId: row.rawMaterialId, quantity: row.quantity }))
+      )
+    );
 
     startTransition(async () => {
       const result =
@@ -174,6 +245,78 @@ export function ProductFormDialog({ mode, product, open, onOpenChange, defaultMa
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Resep (Bahan Baku)</Label>
+              <span className="text-xs text-secondary">
+                Biaya bahan: <span className="font-medium text-foreground">{formatCurrency(recipeCost)}</span>
+              </span>
+            </div>
+
+            {loadingRecipe && <p className="text-xs text-secondary">Memuat resep...</p>}
+
+            {!loadingRecipe && rawMaterials.length === 0 && (
+              <p className="text-xs text-secondary">
+                Belum ada bahan baku. Tambahkan dulu di halaman{" "}
+                <span className="font-medium text-foreground">Bahan Baku</span>.
+              </p>
+            )}
+
+            {!loadingRecipe && rawMaterials.length > 0 && (
+              <div className="space-y-2">
+                {recipeRows.map((row) => {
+                  const material = materialById.get(row.rawMaterialId);
+                  const subtotal = material ? row.quantity * material.price_per_unit : 0;
+                  return (
+                    <div key={row.key} className="flex items-center gap-2">
+                      <Select
+                        value={row.rawMaterialId}
+                        onValueChange={(v) => updateRecipeRow(row.key, { rawMaterialId: v })}
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Pilih bahan" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rawMaterials.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.name} ({m.unit})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        min={0}
+                        step="any"
+                        className="w-20 shrink-0"
+                        value={row.quantity}
+                        onChange={(e) => updateRecipeRow(row.key, { quantity: Number(e.target.value) || 0 })}
+                      />
+                      <span className="w-24 shrink-0 text-right text-xs text-secondary">
+                        {formatCurrency(subtotal)}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        onClick={() => removeRecipeRow(row.key)}
+                        aria-label="Hapus bahan"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+
+                <Button type="button" variant="outline" size="sm" onClick={addRecipeRow}>
+                  <Plus className="h-4 w-4" /> Tambah Bahan
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

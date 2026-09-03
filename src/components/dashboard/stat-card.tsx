@@ -1,8 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
 import { cn, formatCurrency, formatPercent } from "@/lib/utils";
@@ -12,11 +11,11 @@ interface StatCardProps {
   value: number;
   format: "currency" | "percent";
   changePercent: number;
-  icon: ReactNode;
+  icon: LucideIcon;
   index?: number;
 }
 
-export function StatCard({ label, value, format, changePercent, icon, index = 0 }: StatCardProps) {
+export function StatCard({ label, value, format, changePercent, icon: Icon, index = 0 }: StatCardProps) {
   const isPositive = changePercent >= 0;
   const formatter = format === "percent" ? (v: number) => formatPercent(v) : formatCurrency;
 
@@ -30,7 +29,7 @@ export function StatCard({ label, value, format, changePercent, icon, index = 0 
         <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
           <p className="text-xs font-medium text-secondary">{label}</p>
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-            {icon}
+            <Icon className="h-4 w-4 text-secondary" />
           </div>
         </CardHeader>
         <CardContent>
