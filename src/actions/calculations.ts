@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/auth";
 import { calculateHpp } from "@/lib/calculations/hpp";
 import { calculationSchema } from "@/lib/validations/calculation";
+import { getOverheadPerUnit } from "@/actions/overhead";
 import type { ActionResult, Calculation } from "@/types";
 
 export async function saveCalculation(_prevState: ActionResult | null, formData: FormData): Promise<ActionResult> {
@@ -16,7 +17,9 @@ export async function saveCalculation(_prevState: ActionResult | null, formData:
   }
 
   const session = await getSession();
-  const hpp = calculateHpp(parsed.data);
+  const overheadPerUnit = await getOverheadPerUnit();
+  const overheadCost = overheadPerUnit * parsed.data.quantityProduced;
+  const hpp = calculateHpp({ ...parsed.data, overheadCost });
   const supabase = createServiceClient();
 
   const { error } = await supabase.from("calculations").insert({
@@ -27,6 +30,7 @@ export async function saveCalculation(_prevState: ActionResult | null, formData:
     labor_cost: parsed.data.laborCost,
     utility_cost: parsed.data.utilityCost,
     operational_cost: parsed.data.operationalCost,
+    overhead_cost: overheadCost,
     additional_cost: parsed.data.additionalCost,
     quantity_produced: parsed.data.quantityProduced,
     margin_percent: parsed.data.marginPercent,

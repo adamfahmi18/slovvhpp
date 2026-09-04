@@ -20,9 +20,10 @@ interface ProductsToolbarProps {
   categories: string[];
   defaultMarginPercent: number;
   rawMaterials: RawMaterial[];
+  overheadPerUnit: number;
 }
 
-export function ProductsToolbar({ categories, defaultMarginPercent, rawMaterials }: ProductsToolbarProps) {
+export function ProductsToolbar({ categories, defaultMarginPercent, rawMaterials, overheadPerUnit }: ProductsToolbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -99,6 +100,7 @@ export function ProductsToolbar({ categories, defaultMarginPercent, rawMaterials
         onOpenChange={setCreateOpen}
         defaultMarginPercent={defaultMarginPercent}
         rawMaterials={rawMaterials}
+        overheadPerUnit={overheadPerUnit}
       />
     </div>
   );

@@ -3,6 +3,8 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { requireApiSession } from "@/lib/api-auth";
 import { calculateHpp } from "@/lib/calculations/hpp";
 import { productSchema } from "@/lib/validations/product";
+import { syncProductRecipe } from "@/actions/raw-materials";
+import { getOverheadPerUnit } from "@/actions/overhead";
 
 export async function GET(request: NextRequest) {
   const { response } = await requireApiSession();
@@ -51,16 +53,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const hpp = calculateHpp(parsed.data);
   const supabase = createServiceClient();
-  const { data, error } = await supabase
+
+  // Insert first (placeholder cost fields) so the recipe rows have a
+  // product_id to reference, then recompute and patch the real costs.
+  // raw_material_cost is intentionally NOT taken from the request body:
+  // it's always derived server-side from `recipeItems`, the same as the
+  // web UI, so it can't be set arbitrarily via the API.
+  const { data: inserted, error: insertError } = await supabase
     .from("products")
     .insert({
       user_id: session!.userId,
       name: parsed.data.name,
       category: parsed.data.category || "Umum",
       sku: parsed.data.sku || null,
-      raw_material_cost: parsed.data.rawMaterialCost,
       packaging_cost: parsed.data.packagingCost,
       labor_cost: parsed.data.laborCost,
       utility_cost: parsed.data.utilityCost,
@@ -68,12 +74,43 @@ export async function POST(request: NextRequest) {
       additional_cost: parsed.data.additionalCost,
       quantity_produced: parsed.data.quantityProduced,
       margin_percent: parsed.data.marginPercent,
+      status: parsed.data.status,
+    })
+    .select("id")
+    .single();
+
+  if (insertError || !inserted) {
+    return NextResponse.json({ success: false, message: "Gagal membuat produk." }, { status: 500 });
+  }
+
+  const [{ rawMaterialCost }, overheadPerUnit] = await Promise.all([
+    syncProductRecipe(inserted.id, (body as Record<string, unknown> | null)?.recipeItems ?? []),
+    getOverheadPerUnit(),
+  ]);
+  const overheadCost = overheadPerUnit * parsed.data.quantityProduced;
+  const hpp = calculateHpp({
+    rawMaterialCost,
+    packagingCost: parsed.data.packagingCost,
+    laborCost: parsed.data.laborCost,
+    utilityCost: parsed.data.utilityCost,
+    operationalCost: parsed.data.operationalCost,
+    overheadCost,
+    additionalCost: parsed.data.additionalCost,
+    quantityProduced: parsed.data.quantityProduced,
+    marginPercent: parsed.data.marginPercent,
+  });
+
+  const { data, error } = await supabase
+    .from("products")
+    .update({
+      raw_material_cost: rawMaterialCost,
+      overhead_cost: overheadCost,
       total_cost: hpp.totalCost,
       cost_per_item: hpp.costPerItem,
       selling_price: hpp.sellingPrice,
       profit_per_item: hpp.profitPerItem,
-      status: parsed.data.status,
     })
+    .eq("id", inserted.id)
     .select()
     .single();
 

@@ -10,6 +10,13 @@ export interface HppInput {
   laborCost: number;
   utilityCost: number;
   operationalCost: number;
+  /**
+   * Total overhead allocated to this batch (overhead per unit × quantity
+   * produced). Always derived from the Overhead settings — see
+   * `actions/overhead.ts` `getOverheadPerUnit()` — never a free-typed value,
+   * so it can't be tampered with client-side.
+   */
+  overheadCost: number;
   additionalCost: number;
   quantityProduced: number;
   marginPercent: number;
@@ -34,6 +41,7 @@ export function calculateHpp(input: HppInput): HppResult {
     "Tenaga Kerja": Math.max(0, input.laborCost || 0),
     Utilitas: Math.max(0, input.utilityCost || 0),
     Operasional: Math.max(0, input.operationalCost || 0),
+    Overhead: Math.max(0, input.overheadCost || 0),
     Tambahan: Math.max(0, input.additionalCost || 0),
   };
 

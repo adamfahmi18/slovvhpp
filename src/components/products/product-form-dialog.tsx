@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -38,6 +39,7 @@ interface ProductFormDialogProps {
   onOpenChange: (open: boolean) => void;
   defaultMarginPercent: number;
   rawMaterials: RawMaterial[];
+  overheadPerUnit: number;
 }
 
 const COST_FIELDS: { name: keyof ProductInput; label: string }[] = [
@@ -100,6 +102,7 @@ export function ProductFormDialog({
   onOpenChange,
   defaultMarginPercent,
   rawMaterials,
+  overheadPerUnit,
 }: ProductFormDialogProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -164,6 +167,9 @@ export function ProductFormDialog({
   }
 
   const values = watch();
+  const quantityProduced = Number(values.quantityProduced) || 1;
+  const overheadCost = overheadPerUnit * quantityProduced;
+
   const preview = useMemo(
     () =>
       calculateHpp({
@@ -172,11 +178,12 @@ export function ProductFormDialog({
         laborCost: Number(values.laborCost) || 0,
         utilityCost: Number(values.utilityCost) || 0,
         operationalCost: Number(values.operationalCost) || 0,
+        overheadCost,
         additionalCost: Number(values.additionalCost) || 0,
-        quantityProduced: Number(values.quantityProduced) || 1,
+        quantityProduced,
         marginPercent: Number(values.marginPercent) || 0,
       }),
-    [values, recipeCost]
+    [values, recipeCost, overheadCost, quantityProduced]
   );
 
   function onSubmit(data: ProductInput) {
@@ -317,6 +324,21 @@ export function ProductFormDialog({
                 </Button>
               </div>
             )}
+          </div>
+
+          <div className="space-y-1 rounded-lg border border-border p-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">Alokasi Overhead (otomatis)</Label>
+              <span className="text-sm font-medium text-foreground">{formatCurrency(overheadCost)}</span>
+            </div>
+            <p className="text-xs text-secondary">
+              {formatCurrency(overheadPerUnit)}/unit × {quantityProduced} unit dari total biaya overhead bulanan ÷
+              estimasi produksi. Atur di{" "}
+              <Link href="/overhead" className="font-medium text-foreground underline underline-offset-2">
+                menu Overhead
+              </Link>
+              .
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">

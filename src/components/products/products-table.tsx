@@ -29,9 +29,10 @@ interface ProductsTableProps {
   products: Product[];
   defaultMarginPercent: number;
   rawMaterials: RawMaterial[];
+  overheadPerUnit: number;
 }
 
-export function ProductsTable({ products, defaultMarginPercent, rawMaterials }: ProductsTableProps) {
+export function ProductsTable({ products, defaultMarginPercent, rawMaterials, overheadPerUnit }: ProductsTableProps) {
   const [editing, setEditing] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<Product | null>(null);
 
@@ -111,6 +112,7 @@ export function ProductsTable({ products, defaultMarginPercent, rawMaterials }: 
           onOpenChange={(open) => !open && setEditing(null)}
           defaultMarginPercent={defaultMarginPercent}
           rawMaterials={rawMaterials}
+          overheadPerUnit={overheadPerUnit}
         />
       )}
 

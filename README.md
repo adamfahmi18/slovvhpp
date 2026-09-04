@@ -18,15 +18,25 @@ Framer Motion, Supabase, Recharts, React Hook Form, dan Zod.
    tabel (`users`, `products`, `calculations`, `reports`, `analytics`,
    `app_settings`), trigger `updated_at`, mengaktifkan Row Level Security, dan
    membuat satu akun admin awal (`admin` / `change-this-password`).
-3. **Ganti password admin** setelah login pertama kali dari halaman
+3. Jalankan `supabase/02_bahan_baku.sql` — menambahkan tabel `raw_materials`
+   (bahan baku) dan `product_recipe_items` (resep produk), sehingga biaya
+   bahan baku produk dihitung otomatis dari resep alih-alih diketik manual.
+4. Jalankan `supabase/03_overhead.sql` — menambahkan tabel `overhead_costs`
+   (biaya tetap bulanan seperti sewa/gaji/listrik), kolom
+   `app_settings.estimated_monthly_production`, dan kolom `overhead_cost` di
+   `products`/`calculations`/`analytics`. Overhead per unit dihitung otomatis
+   sebagai `total biaya overhead ÷ estimasi produksi bulanan` dan ikut masuk
+   ke setiap perhitungan HPP (lihat menu **Overhead**).
+5. **Ganti password admin** setelah login pertama kali dari halaman
    **Pengaturan → Ubah Password**, atau update langsung di database dengan:
    ```sql
    update public.users
    set password_hash = crypt('password-baru-anda', gen_salt('bf'))
    where username = 'admin';
    ```
-4. *(Opsional)* Jalankan `supabase/seed.sql` untuk data contoh (produk +
-   60 hari data analitik) agar Dashboard/Laporan/Analitik langsung terisi.
+6. *(Opsional)* Jalankan `supabase/seed.sql` (setelah ketiga file di atas)
+   untuk data contoh (produk, resep, bahan baku, biaya overhead, dan 60 hari
+   data analitik) agar Dashboard/Laporan/Analitik/Overhead langsung terisi.
 5. Ambil `Project URL`, `anon public key`, dan `service_role key` dari
    **Project Settings → API** untuk langkah berikutnya.
 
@@ -110,6 +120,20 @@ supabase/
 - Tabel `app_settings` ditambahkan di luar 5 tabel inti untuk menyimpan
   Pengaturan Sistem (nama perusahaan, margin default, mata uang) secara
   persisten.
+- **Resep & Bahan Baku**: setiap produk punya resep (bill of materials) yang
+  menentukan `raw_material_cost`-nya secara otomatis dari
+  `sum(quantity × price_per_unit)` bahan yang dipakai — bukan input manual.
+  Mengubah harga satu bahan baku otomatis memperbarui HPP semua produk yang
+  memakainya saat produk itu dibuka/disimpan ulang.
+- **Overhead**: biaya tetap bulanan (sewa, gaji, listrik, dll) dikelola di
+  menu Overhead terpisah dari biaya per-batch. `overhead_cost` yang masuk ke
+  setiap kalkulasi/produk **selalu dihitung ulang di server**
+  (`getOverheadPerUnit() × quantityProduced`), tidak pernah dipercaya dari
+  input klien — pola yang sama seperti `raw_material_cost` dari resep — agar
+  angka HPP tidak bisa dimanipulasi dari sisi browser.
+- **Navigasi**: menu utama (bottom nav mobile) berisi Dashboard, Kalkulator,
+  Produk, dan Bahan Baku; Overhead, Laporan, Analitik, dan Pengaturan berada
+  di menu "Lainnya". Di sidebar desktop semua menu tetap tampil sejajar.
 - Setiap query database berjalan di server (Server Actions / Route Handlers)
   menggunakan `service_role key`, sehingga Row Level Security tetap aktif
   dan tidak ada akses langsung dari browser ke Supabase.

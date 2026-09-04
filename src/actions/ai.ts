@@ -29,18 +29,21 @@ export async function generateBusinessAnalysis(): Promise<AiAnalysisResult> {
       acc.labor += Number(row.labor_cost) || 0;
       acc.utility += Number(row.utility_cost) || 0;
       acc.operational += Number(row.operational_cost) || 0;
+      acc.overhead += Number(row.overhead_cost) || 0;
       return acc;
     },
-    { revenue: 0, cost: 0, profit: 0, rawMaterial: 0, packaging: 0, labor: 0, utility: 0, operational: 0 }
+    { revenue: 0, cost: 0, profit: 0, rawMaterial: 0, packaging: 0, labor: 0, utility: 0, operational: 0, overhead: 0 }
   );
 
-  const totalCostBreakdown = totals.rawMaterial + totals.packaging + totals.labor + totals.utility + totals.operational;
+  const totalCostBreakdown =
+    totals.rawMaterial + totals.packaging + totals.labor + totals.utility + totals.operational + totals.overhead;
   const costBreakdown = [
     { label: "Bahan Baku", percent: totalCostBreakdown > 0 ? (totals.rawMaterial / totalCostBreakdown) * 100 : 0 },
     { label: "Kemasan", percent: totalCostBreakdown > 0 ? (totals.packaging / totalCostBreakdown) * 100 : 0 },
     { label: "Tenaga Kerja", percent: totalCostBreakdown > 0 ? (totals.labor / totalCostBreakdown) * 100 : 0 },
     { label: "Utilitas", percent: totalCostBreakdown > 0 ? (totals.utility / totalCostBreakdown) * 100 : 0 },
     { label: "Operasional", percent: totalCostBreakdown > 0 ? (totals.operational / totalCostBreakdown) * 100 : 0 },
+    { label: "Overhead", percent: totalCostBreakdown > 0 ? (totals.overhead / totalCostBreakdown) * 100 : 0 },
   ];
 
   const sortedByUnits = [...products].sort((a, b) => b.units_sold - a.units_sold);

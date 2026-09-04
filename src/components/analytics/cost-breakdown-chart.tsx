@@ -4,7 +4,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 
-const COLORS = ["#0C0A09", "#57534E", "#78716C", "#A8A29E", "#D6D3D1"];
+const COLORS = ["#0C0A09", "#57534E", "#78716C", "#A8A29E", "#D6D3D1", "#8B7355"];
 
 interface CostBreakdownChartProps {
   data: { label: string; value: number }[];

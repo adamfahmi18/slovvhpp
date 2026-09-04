@@ -15,7 +15,8 @@ import { calculateHpp } from "@/lib/calculations/hpp";
 import { HppResultPanel } from "./hpp-result";
 import { saveCalculation } from "@/actions/calculations";
 import { createProductFromCalculation } from "@/actions/products";
-import { formatPercent } from "@/lib/utils";
+import { formatCurrency, formatPercent } from "@/lib/utils";
+import Link from "next/link";
 
 const FIELDS: { name: keyof CalculationInput; label: string; placeholder: string }[] = [
   { name: "rawMaterialCost", label: "Biaya Bahan Baku", placeholder: "0" },
@@ -38,7 +39,13 @@ const DEFAULT_VALUES: CalculationInput = {
   marginPercent: 30,
 };
 
-export function HppForm({ defaultMarginPercent = 30 }: { defaultMarginPercent?: number }) {
+export function HppForm({
+  defaultMarginPercent = 30,
+  overheadPerUnit = 0,
+}: {
+  defaultMarginPercent?: number;
+  overheadPerUnit?: number;
+}) {
   const [isSaving, startSaving] = useTransition();
   const [isCreatingProduct, startCreatingProduct] = useTransition();
 
@@ -56,6 +63,9 @@ export function HppForm({ defaultMarginPercent = 30 }: { defaultMarginPercent?: 
   const values = watch();
   const [marginPercent, setMarginPercent] = useState(defaultMarginPercent);
 
+  const quantityProduced = Number(values.quantityProduced) || 1;
+  const overheadCost = overheadPerUnit * quantityProduced;
+
   const result = useMemo(
     () =>
       calculateHpp({
@@ -64,11 +74,12 @@ export function HppForm({ defaultMarginPercent = 30 }: { defaultMarginPercent?: 
         laborCost: Number(values.laborCost) || 0,
         utilityCost: Number(values.utilityCost) || 0,
         operationalCost: Number(values.operationalCost) || 0,
+        overheadCost,
         additionalCost: Number(values.additionalCost) || 0,
-        quantityProduced: Number(values.quantityProduced) || 1,
+        quantityProduced,
         marginPercent,
       }),
-    [values, marginPercent]
+    [values, marginPercent, overheadCost, quantityProduced]
   );
 
   function handleSave() {
@@ -160,6 +171,21 @@ export function HppForm({ defaultMarginPercent = 30 }: { defaultMarginPercent?: 
               {errors.quantityProduced && (
                 <p className="text-xs text-destructive">{errors.quantityProduced.message}</p>
               )}
+            </div>
+
+            <div className="space-y-1 rounded-lg border border-border p-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Alokasi Overhead (otomatis)</Label>
+                <span className="text-sm font-medium text-foreground">{formatCurrency(overheadCost)}</span>
+              </div>
+              <p className="text-xs text-secondary">
+                {formatCurrency(overheadPerUnit)}/unit × {quantityProduced} unit — dihitung dari total biaya
+                overhead bulanan ÷ estimasi produksi bulanan. Atur di{" "}
+                <Link href="/overhead" className="font-medium text-foreground underline underline-offset-2">
+                  menu Overhead
+                </Link>
+                .
+              </p>
             </div>
 
             <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-4">

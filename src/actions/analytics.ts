@@ -43,9 +43,10 @@ export async function getAnalyticsData(rangeDays = 90): Promise<AnalyticsData> {
       acc.labor += Number(row.labor_cost) || 0;
       acc.utility += Number(row.utility_cost) || 0;
       acc.operational += Number(row.operational_cost) || 0;
+      acc.overhead += Number(row.overhead_cost) || 0;
       return acc;
     },
-    { rawMaterial: 0, packaging: 0, labor: 0, utility: 0, operational: 0 }
+    { rawMaterial: 0, packaging: 0, labor: 0, utility: 0, operational: 0, overhead: 0 }
   );
 
   const costBreakdown = [
@@ -54,6 +55,7 @@ export async function getAnalyticsData(rangeDays = 90): Promise<AnalyticsData> {
     { label: "Tenaga Kerja", value: totals.labor },
     { label: "Utilitas", value: totals.utility },
     { label: "Operasional", value: totals.operational },
+    { label: "Overhead", value: totals.overhead },
   ];
 
   const sortedByUnitsSold = [...products].sort((a, b) => b.units_sold - a.units_sold);

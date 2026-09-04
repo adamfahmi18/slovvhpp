@@ -7,6 +7,7 @@ import { Pagination } from "@/components/shared/pagination";
 import { getProducts, getProductCategories } from "@/actions/products";
 import { getAllRawMaterials } from "@/actions/raw-materials";
 import { getSystemSettings } from "@/actions/settings";
+import { getOverheadSummary } from "@/actions/overhead";
 
 export const metadata: Metadata = { title: "Produk" };
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
 
-  const [{ items, total, totalPages, pageSize }, categories, settings, rawMaterials] = await Promise.all([
+  const [{ items, total, totalPages, pageSize }, categories, settings, rawMaterials, overhead] = await Promise.all([
     getProducts({
       search: params.search,
       category: params.category ?? "all",
@@ -30,6 +31,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     getProductCategories(),
     getSystemSettings(),
     getAllRawMaterials(),
+    getOverheadSummary(),
   ]);
 
   return (
@@ -40,6 +42,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         categories={categories}
         defaultMarginPercent={Number(settings.default_margin_percent) || 30}
         rawMaterials={rawMaterials}
+        overheadPerUnit={overhead.overheadPerUnit}
       />
 
       <Card className="overflow-hidden">
@@ -47,6 +50,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           products={items}
           defaultMarginPercent={Number(settings.default_margin_percent) || 30}
           rawMaterials={rawMaterials}
+          overheadPerUnit={overhead.overheadPerUnit}
         />
         {total > 0 && <Pagination page={page} totalPages={totalPages} total={total} pageSize={pageSize} />}
       </Card>

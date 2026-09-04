@@ -11,6 +11,7 @@ const BREAKDOWN_COLORS: Record<string, string> = {
   "Tenaga Kerja": "#78716C",
   Utilitas: "#A8A29E",
   Operasional: "#D6D3D1",
+  Overhead: "#8B7355",
   Tambahan: "#E7E5E4",
 };
 

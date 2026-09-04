@@ -9,6 +9,7 @@ export interface Product {
   labor_cost: number;
   utility_cost: number;
   operational_cost: number;
+  overhead_cost: number;
   additional_cost: number;
   quantity_produced: number;
   total_cost: number;
@@ -32,6 +33,7 @@ export interface Calculation {
   labor_cost: number;
   utility_cost: number;
   operational_cost: number;
+  overhead_cost: number;
   additional_cost: number;
   quantity_produced: number;
   margin_percent: number;
@@ -64,6 +66,23 @@ export interface RecipeItemWithMaterial extends RecipeItem {
   raw_material: Pick<RawMaterial, "id" | "name" | "unit" | "price_per_unit">;
 }
 
+export interface OverheadCost {
+  id: string;
+  user_id: string | null;
+  name: string;
+  amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Total monthly overhead divided by estimated monthly production. */
+export interface OverheadSummary {
+  items: OverheadCost[];
+  totalMonthlyOverhead: number;
+  estimatedMonthlyProduction: number;
+  overheadPerUnit: number;
+}
+
 export type PeriodType = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface Report {
@@ -91,6 +110,7 @@ export interface AnalyticsDay {
   labor_cost: number;
   utility_cost: number;
   operational_cost: number;
+  overhead_cost: number;
   top_product_id: string | null;
   created_at: string;
 }

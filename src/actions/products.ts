@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import { calculateHpp } from "@/lib/calculations/hpp";
 import { productSchema } from "@/lib/validations/product";
 import { syncProductRecipe } from "@/actions/raw-materials";
+import { getOverheadPerUnit } from "@/actions/overhead";
 import type { ActionResult, PaginatedResult, Product } from "@/types";
 
 export interface GetProductsParams {
@@ -96,13 +97,18 @@ export async function createProduct(_prevState: ActionResult | null, formData: F
     return { success: false, message: "Gagal menyimpan produk. Coba lagi." };
   }
 
-  const { rawMaterialCost } = await syncProductRecipe(inserted.id, parseRecipeItems(formData));
+  const [{ rawMaterialCost }, overheadPerUnit] = await Promise.all([
+    syncProductRecipe(inserted.id, parseRecipeItems(formData)),
+    getOverheadPerUnit(),
+  ]);
+  const overheadCost = overheadPerUnit * parsed.data.quantityProduced;
   const hpp = calculateHpp({
     rawMaterialCost,
     packagingCost: parsed.data.packagingCost,
     laborCost: parsed.data.laborCost,
     utilityCost: parsed.data.utilityCost,
     operationalCost: parsed.data.operationalCost,
+    overheadCost,
     additionalCost: parsed.data.additionalCost,
     quantityProduced: parsed.data.quantityProduced,
     marginPercent: parsed.data.marginPercent,
@@ -112,6 +118,7 @@ export async function createProduct(_prevState: ActionResult | null, formData: F
     .from("products")
     .update({
       raw_material_cost: rawMaterialCost,
+      overhead_cost: overheadCost,
       total_cost: hpp.totalCost,
       cost_per_item: hpp.costPerItem,
       selling_price: hpp.sellingPrice,
@@ -150,13 +157,18 @@ export async function updateProduct(
     return { success: false, message: "Periksa kembali data produk.", errors: parsed.error.flatten().fieldErrors };
   }
 
-  const { rawMaterialCost } = await syncProductRecipe(id, parseRecipeItems(formData));
+  const [{ rawMaterialCost }, overheadPerUnit] = await Promise.all([
+    syncProductRecipe(id, parseRecipeItems(formData)),
+    getOverheadPerUnit(),
+  ]);
+  const overheadCost = overheadPerUnit * parsed.data.quantityProduced;
   const hpp = calculateHpp({
     rawMaterialCost,
     packagingCost: parsed.data.packagingCost,
     laborCost: parsed.data.laborCost,
     utilityCost: parsed.data.utilityCost,
     operationalCost: parsed.data.operationalCost,
+    overheadCost,
     additionalCost: parsed.data.additionalCost,
     quantityProduced: parsed.data.quantityProduced,
     marginPercent: parsed.data.marginPercent,
@@ -174,6 +186,7 @@ export async function updateProduct(
       labor_cost: parsed.data.laborCost,
       utility_cost: parsed.data.utilityCost,
       operational_cost: parsed.data.operationalCost,
+      overhead_cost: overheadCost,
       additional_cost: parsed.data.additionalCost,
       quantity_produced: parsed.data.quantityProduced,
       margin_percent: parsed.data.marginPercent,
@@ -206,7 +219,9 @@ export async function createProductFromCalculation(input: {
   marginPercent: number;
 }): Promise<ActionResult> {
   const session = await getSession();
-  const hpp = calculateHpp(input);
+  const overheadPerUnit = await getOverheadPerUnit();
+  const overheadCost = overheadPerUnit * input.quantityProduced;
+  const hpp = calculateHpp({ ...input, overheadCost });
   const supabase = createServiceClient();
 
   const { error } = await supabase.from("products").insert({
@@ -218,6 +233,7 @@ export async function createProductFromCalculation(input: {
     labor_cost: input.laborCost,
     utility_cost: input.utilityCost,
     operational_cost: input.operationalCost,
+    overhead_cost: overheadCost,
     additional_cost: input.additionalCost,
     quantity_produced: input.quantityProduced,
     margin_percent: input.marginPercent,

@@ -4,6 +4,10 @@ export const productSchema = z.object({
   name: z.string().min(2, "Nama produk minimal 2 karakter").max(120),
   category: z.string().min(1, "Kategori wajib diisi").default("Umum"),
   sku: z.string().optional().or(z.literal("")),
+  // Accepted for backward-compat with existing form submissions, but the
+  // real raw_material_cost is always recomputed server-side from the
+  // product's recipe (`recipeItems`) — see `syncProductRecipe`. This value
+  // is never trusted or persisted directly.
   rawMaterialCost: z.coerce.number().min(0, "Tidak boleh negatif"),
   packagingCost: z.coerce.number().min(0, "Tidak boleh negatif"),
   laborCost: z.coerce.number().min(0, "Tidak boleh negatif"),
