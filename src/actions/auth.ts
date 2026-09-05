@@ -54,7 +54,7 @@ export async function loginAction(_prevState: ActionResult | null, formData: For
       rememberMe
     );
 
-    redirectTo = "/dashboard";
+    redirectTo = "/calculator";
   } catch {
     return {
       success: false,

@@ -10,9 +10,10 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   const session = await verifySessionEdge(token);
 
-  // Signed in and hitting /login -> send to dashboard.
+  // Signed in and hitting /login -> send to the calculator (HPP is the
+  // focus of this app; Dashboard/Laporan/Analitik are hidden from nav).
   if (isPublicPath && session) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/calculator", request.url));
   }
 
   // Not signed in and hitting a protected route -> send to login.
